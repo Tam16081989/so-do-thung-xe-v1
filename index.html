@@ -1,0 +1,258 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Vẽ sơ đồ xếp hàng thùng xe</title>
+<style>
+:root{--bg:#f3f5f9;--card:#fff;--tx:#1b2433;--mu:#6b778c;--bd:#d9dfea;--pri:#1d5fd1;box-sizing:border-box;padding-top:env(safe-area-inset-top,0px);padding-bottom:env(safe-area-inset-bottom,0px)}
+@media (prefers-color-scheme:dark){:root:not([data-theme="light"]){--bg:#10141c;--card:#1a2130;--tx:#e8ecf4;--mu:#93a0b8;--bd:#2c3649;--pri:#5b9bff;color-scheme:dark}}
+*{box-sizing:border-box}
+body{margin:0;background:var(--bg);color:var(--tx);font-family:system-ui,-apple-system,"Segoe UI",Roboto,sans-serif;font-size:14px}
+h1{font-size:18px;margin:0 0 4px}
+.wrap{max-width:1000px;margin:0 auto;padding:14px;display:flex;gap:14px;flex-wrap:wrap;align-items:flex-start}
+.canvas{flex:1 1 360px;background:var(--card);border:1px solid var(--bd);border-radius:12px;padding:10px;display:flex;justify-content:center}
+.canvas svg{width:100%;max-width:420px;height:auto;touch-action:none;user-select:none;border-radius:10px}
+.panel{flex:1 1 280px;display:flex;flex-direction:column;gap:12px;min-width:0}
+.box{background:var(--card);border:1px solid var(--bd);border-radius:12px;padding:12px}
+.box h2{font-size:14px;margin:0 0 8px}
+.hint{color:var(--mu);font-size:12.5px;margin:0 0 10px}
+.row{display:flex;gap:6px;flex-wrap:wrap}
+button{font:inherit;border:1px solid var(--bd);background:var(--card);color:var(--tx);padding:8px 10px;border-radius:8px;cursor:pointer}
+button:hover{border-color:var(--pri)}
+button.pri{background:var(--pri);border-color:var(--pri);color:#fff;font-weight:600}
+button.dng{color:#d33}
+label{display:block;font-size:12.5px;color:var(--mu);margin:8px 0 3px}
+input[type=text],textarea{width:100%;font:inherit;padding:8px;border:1px solid var(--bd);border-radius:8px;background:var(--bg);color:var(--tx)}
+textarea{resize:vertical;min-height:58px}
+.sw{display:flex;gap:6px;flex-wrap:wrap;margin-top:4px}
+.sw i{width:26px;height:26px;border-radius:50%;border:2px solid transparent;cursor:pointer;display:block}
+.sw i.on{border-color:var(--tx)}
+.grid2{display:grid;grid-template-columns:1fr 1fr;gap:6px}
+.off{opacity:.45;pointer-events:none}
+#modal{display:none;position:fixed;inset:0;background:rgba(0,0,0,.7);z-index:50;align-items:center;justify-content:center;padding:14px}
+#modal .mc{background:var(--card);border-radius:12px;padding:12px;max-width:440px;width:100%;max-height:100%;overflow:auto;display:flex;flex-direction:column;gap:10px}
+#mImg{width:100%;max-height:55vh;object-fit:contain;border-radius:8px;background:#fff}
+#mMsg{font-size:12.5px;color:var(--mu);margin:0}
+</style>
+</head>
+<body>
+<div class="wrap">
+  <div class="canvas"><svg id="svg" viewBox="0 0 400 680" xmlns="http://www.w3.org/2000/svg"></svg></div>
+
+  <div class="panel">
+    <div class="box">
+      <h1>Vẽ sơ đồ xếp hàng thùng xe</h1>
+      <p class="hint">Bấm vào 1 khu để chọn. Kéo khu để di chuyển, kéo ô vuông ở góc dưới phải để đổi kích thước. Các cạnh tự hít vào nhau.</p>
+      <div class="row">
+        <button class="pri" id="bAdd">+ Thêm khu</button>
+        <button id="bSplitH">Chia ngang</button>
+        <button id="bSplitV">Chia dọc</button>
+        <button id="bCopy">Nhân bản</button>
+        <button class="dng" id="bDel">Xóa khu</button>
+      </div>
+    </div>
+
+    <div class="box" id="edit">
+      <h2>Khu đang chọn</h2>
+      <label>Tên khu</label>
+      <input type="text" id="fTitle">
+      <label>Ghi chú (mỗi dòng 1 câu)</label>
+      <textarea id="fSub"></textarea>
+      <label>Màu</label>
+      <div class="sw" id="sw"></div>
+    </div>
+
+    <div class="box">
+      <h2>Chữ cố định trên sơ đồ</h2>
+      <div class="grid2">
+        <div><label>Bên trái</label><input type="text" id="tTrai"></div>
+        <div><label>Bên phải</label><input type="text" id="tPhai"></div>
+        <div><label>Đầu xe</label><input type="text" id="tDau"></div>
+        <div><label>Cuối thùng</label><input type="text" id="tCuoi"></div>
+      </div>
+    </div>
+
+    <div class="box">
+      <div class="row">
+        <button class="pri" id="bPng">Xuất ảnh để gửi</button>
+        <button id="bReset">Về mẫu ban đầu</button>
+      </div>
+    </div>
+  </div>
+</div>
+
+<div id="modal"><div class="mc">
+  <b>Ảnh đã sẵn sàng</b>
+  <img id="mImg" alt="Sơ đồ xếp hàng">
+  <div class="row">
+    <button class="pri" id="mShare">Chia sẻ (Zalo/Telegram...)</button>
+    <button id="mCopy">Sao chép ảnh</button>
+    <button id="mDown">Tải về</button>
+    <button id="mClose">Đóng</button>
+  </div>
+  <p id="mMsg">Cách chắc chắn nhất: nhấn giữ vào ảnh (điện thoại) hoặc bấm chuột phải (máy tính) rồi chọn Lưu ảnh / Sao chép ảnh.</p>
+</div></div>
+<script>
+const BX=40,BY=125,BW=320,BH=470,MIN=40,SNAP=8;
+const COLORS=['#5bb0ff','#F26522','#6fd24a','#ffd84d','#b78cff','#ff7a7a','#9aa7b8','#2dd4bf'];
+const mk=(x,y,w,h,color,title,sub)=>({id:Math.random().toString(36).slice(2),x,y,w,h,color,title,sub});
+const sample=()=>[
+  mk(0,0,160,470,COLORS[0],'BC PHƯỚC THỜI','(Giao) + (Hàng lấy\nỞ Môn + Phước Thời)'),
+  mk(160,0,160,300,COLORS[1],'GIAO HÀNG NẶNG','(Hàng giao)'),
+  mk(160,300,160,170,COLORS[2],'BC Ô MÔN','(Hàng giao)')
+];
+let zones=sample(), sel=zones[0].id;
+const T={trai:'TRÁI',phai:'PHẢI',dau:'▲ ĐẦU XE (CABIN)',cuoi:'Cuối thùng (cửa sau)',dai:'Chiều dài'};
+const $=id=>document.getElementById(id), svg=$('svg');
+const ctx=document.createElement('canvas').getContext('2d');
+const tw=(s,sz,b)=>{ctx.font=(b?'bold ':'')+sz+'px sans-serif';return ctx.measureText(s).width};
+const esc=s=>String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');
+function dark(hex,f){const n=parseInt(hex.slice(1),16);return '#'+[16,8,0].map(s=>Math.round(((n>>s)&255)*f).toString(16).padStart(2,'0')).join('')}
+function pill(cx,cy,text,sz,fill,hasSub){return ''}
+function label(cx,cy,text,sz,fill,rot){
+  const w=tw(text,sz,true)+18,h=sz+10;
+  return `<g transform="translate(${cx},${cy})${rot?' rotate('+rot+')':''}"><rect x="${-w/2}" y="${-h/2}" width="${w}" height="${h}" rx="4" fill="${fill}"/><text x="0" y="${sz*0.36}" text-anchor="middle" font-family="sans-serif" font-weight="700" font-size="${sz}" fill="#fff">${esc(text)}</text></g>`;
+}
+function zoneLabel(z){
+  const cx=BX+z.x+z.w/2, cy=BY+z.y+z.h/2, fill=dark(z.color,0.42);
+  const subs=z.sub?z.sub.split('\n').filter(s=>s.trim()):[];
+  const tSz=14, sSz=11;
+  const maxW=Math.max(tw(z.title,tSz,true),...subs.map(s=>tw(s,sSz,true)),10)+22;
+  const w=Math.min(maxW,z.w-6), h=tSz+10+subs.length*(sSz+3)+(subs.length?4:0);
+  let s=`<rect x="${cx-w/2}" y="${cy-h/2}" width="${w}" height="${h}" rx="6" fill="${fill}"/>`;
+  s+=`<text x="${cx}" y="${cy-h/2+tSz+3}" text-anchor="middle" font-family="sans-serif" font-weight="700" font-size="${tSz}" fill="#fff">${esc(z.title)}</text>`;
+  subs.forEach((t,i)=>{s+=`<text x="${cx}" y="${cy-h/2+tSz+8+(i+1)*(sSz+3)-2}" text-anchor="middle" font-family="sans-serif" font-weight="600" font-size="${sSz}" fill="#fff">${esc(t)}</text>`});
+  return s;
+}
+function cabin(){
+  return `<g>
+  <defs>
+  <linearGradient id="gB" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#f7f9fc"/><stop offset="1" stop-color="#c3cad5"/></linearGradient>
+  <linearGradient id="gG" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#3f5f82"/><stop offset="1" stop-color="#16202e"/></linearGradient>
+  </defs>
+  <rect x="60" y="88" width="14" height="32" rx="4" fill="#20252c"/><rect x="326" y="88" width="14" height="32" rx="4" fill="#20252c"/>
+  <path d="M74 62H60M326 62H340" stroke="#5a6472" stroke-width="4" stroke-linecap="round"/>
+  <rect x="38" y="46" width="22" height="40" rx="8" fill="#2a3038" stroke="#7d8796" stroke-width="1.5"/><rect x="340" y="46" width="22" height="40" rx="8" fill="#2a3038" stroke="#7d8796" stroke-width="1.5"/>
+  <rect x="72" y="26" width="256" height="96" rx="30" fill="url(#gB)" stroke="#7d8796" stroke-width="2"/>
+  <path d="M92 46Q200 28 308 46L298 70Q200 54 102 70Z" fill="url(#gG)" stroke="#0e1620" stroke-width="1.5"/>
+  <path d="M118 50Q150 42 180 40L160 56Q135 58 112 62Z" fill="#fff" opacity=".18"/>
+  <rect x="96" y="76" width="208" height="36" rx="12" fill="#e9edf3" stroke="#9aa4b2" stroke-width="1.5"/>
+  <rect x="96" y="88" width="208" height="9" fill="#F26522"/>
+  <rect x="82" y="31" width="26" height="9" rx="4" fill="#ffe9a8" stroke="#9a8a4a"/><rect x="292" y="31" width="26" height="9" rx="4" fill="#ffe9a8" stroke="#9a8a4a"/>
+  </g>`;
+}
+function render(forExport){
+  let s=`<rect width="400" height="680" rx="14" fill="#fff"/>`;
+  s+=cabin();
+  s+=label(40,22,T.trai,13,'#123a6b')+label(360,22,T.phai,13,'#123a6b');
+  s+=label(200,108,T.dau,12,'#123a6b');
+  s+=`<rect x="${BX-6}" y="${BY-6}" width="${BW+12}" height="${BH+12}" rx="4" fill="#d5dae1" stroke="#9aa3af" stroke-width="2"/>`;
+  s+=`<rect x="${BX}" y="${BY}" width="${BW}" height="${BH}" fill="#fff"/>`;
+  s+=`<rect x="${BX+60}" y="${BY+BH+8}" width="26" height="9" rx="2" fill="#c0392b"/><rect x="${BX+BW-86}" y="${BY+BH+8}" width="26" height="9" rx="2" fill="#c0392b"/>`;
+  zones.forEach(z=>{
+    s+=`<g data-id="${z.id}" ${forExport?'':'style="cursor:move"'}>`;
+    s+=`<rect x="${BX+z.x}" y="${BY+z.y}" width="${z.w}" height="${z.h}" fill="${z.color}" stroke="#16335a" stroke-width="1.6"/>`;
+    s+=`<path d="M${BX+z.x} ${BY+z.y+16}H${BX+z.x+16}V${BY+z.y}" fill="none" stroke="#16335a" stroke-width="1.4"/>`;
+    s+=zoneLabel(z)+`</g>`;
+  });
+  if(!forExport){
+    const z=zones.find(a=>a.id===sel);
+    if(z){
+      s+=`<rect x="${BX+z.x}" y="${BY+z.y}" width="${z.w}" height="${z.h}" fill="none" stroke="#e11d48" stroke-width="2.5" stroke-dasharray="7 4" pointer-events="none"/>`;
+      s+=`<rect data-h="1" x="${BX+z.x+z.w-12}" y="${BY+z.y+z.h-12}" width="14" height="14" rx="3" fill="#e11d48" stroke="#fff" stroke-width="1.5" style="cursor:nwse-resize"/>`;
+    }
+  }
+  // mũi tên chiều dài
+  s+=`<g stroke="#123a6b" stroke-width="1.6" fill="#123a6b"><line x1="22" y1="${BY+6}" x2="22" y2="${BY+BH-6}"/><path d="M22 ${BY} l-5 10 h10z"/><path d="M22 ${BY+BH} l-5 -10 h10z"/></g>`;
+  s+=label(22,BY+BH/2,T.dai,11,'#123a6b',-90);
+  s+=`<line x1="${BX}" y1="${BY+BH+34}" x2="${BX+BW}" y2="${BY+BH+34}" stroke="#123a6b" stroke-width="1.5"/>`;
+  s+=label(200,BY+BH+34,T.cuoi,12,'#123a6b');
+  svg.innerHTML=s;
+}
+function syncPanel(){
+  const z=zones.find(a=>a.id===sel);
+  $('edit').classList.toggle('off',!z);
+  ['bSplitH','bSplitV','bCopy','bDel'].forEach(i=>$(i).classList.toggle('off',!z));
+  $('fTitle').value=z?z.title:''; $('fSub').value=z?z.sub:'';
+  $('sw').innerHTML=COLORS.map(c=>`<i data-c="${c}" style="background:${c}" class="${z&&z.color===c?'on':''}"></i>`).join('');
+}
+function select(id){sel=id;syncPanel();render()}
+// kéo thả
+function pt(e){const p=svg.createSVGPoint();p.x=e.clientX;p.y=e.clientY;return p.matrixTransform(svg.getScreenCTM().inverse())}
+function snapV(v,cands){let b=v,d=SNAP+1;cands.forEach(c=>{const k=Math.abs(c-v);if(k<d){d=k;b=c}});return d<=SNAP?b:v}
+let drag=null;
+svg.addEventListener('pointerdown',e=>{
+  const h=e.target.closest('[data-h]'), g=e.target.closest('[data-id]');
+  if(h){const z=zones.find(a=>a.id===sel);drag={m:'r',z,p:pt(e),o:{...z}}}
+  else if(g){const z=zones.find(a=>a.id===g.dataset.id);select(z.id);drag={m:'m',z,p:pt(e),o:{...z}}}
+  else {select(null);return}
+  svg.setPointerCapture(e.pointerId);
+});
+svg.addEventListener('pointermove',e=>{
+  if(!drag)return;
+  const p=pt(e),dx=p.x-drag.p.x,dy=p.y-drag.p.y,z=drag.z,o=drag.o;
+  const others=zones.filter(a=>a!==z);
+  const xs=[0,BW,...others.flatMap(a=>[a.x,a.x+a.w])], ys=[0,BH,...others.flatMap(a=>[a.y,a.y+a.h])];
+  if(drag.m==='m'){
+    let nx=o.x+dx,ny=o.y+dy;
+    const l=snapV(nx,xs),r=snapV(nx+o.w,xs)-o.w; nx=(l!==nx)?l:r;
+    const t=snapV(ny,ys),b=snapV(ny+o.h,ys)-o.h; ny=(t!==ny)?t:b;
+    z.x=Math.round(Math.max(0,Math.min(BW-o.w,nx)));z.y=Math.round(Math.max(0,Math.min(BH-o.h,ny)));
+  }else{
+    let r=snapV(o.x+o.w+dx,xs),b=snapV(o.y+o.h+dy,ys);
+    z.w=Math.round(Math.max(MIN,Math.min(BW-z.x,r-z.x)));z.h=Math.round(Math.max(MIN,Math.min(BH-z.y,b-z.y)));
+  }
+  render();
+});
+const end=()=>{drag=null};
+svg.addEventListener('pointerup',end);svg.addEventListener('pointercancel',end);
+// nút
+const cur=()=>zones.find(a=>a.id===sel);
+const nextColor=()=>COLORS[zones.length%COLORS.length];
+$('bAdd').onclick=()=>{const z=mk(BW/2-60,BH/2-50,120,100,nextColor(),'KHU MỚI','(Hàng giao)');zones.push(z);select(z.id)};
+$('bSplitH').onclick=()=>{const z=cur();if(!z||z.h<MIN*2)return;const h=Math.round(z.h/2);const n=mk(z.x,z.y+h,z.w,z.h-h,nextColor(),'KHU MỚI','(Hàng giao)');z.h=h;zones.push(n);select(n.id)};
+$('bSplitV').onclick=()=>{const z=cur();if(!z||z.w<MIN*2)return;const w=Math.round(z.w/2);const n=mk(z.x+w,z.y,z.w-w,z.h,nextColor(),'KHU MỚI','(Hàng giao)');z.w=w;zones.push(n);select(n.id)};
+$('bCopy').onclick=()=>{const z=cur();if(!z)return;const n=mk(Math.min(z.x+15,BW-z.w),Math.min(z.y+15,BH-z.h),z.w,z.h,z.color,z.title,z.sub);zones.push(n);select(n.id)};
+$('bDel').onclick=()=>{if(!sel)return;zones=zones.filter(a=>a.id!==sel);sel=null;syncPanel();render()};
+$('bReset').onclick=()=>{zones=sample();sel=zones[0].id;syncPanel();render()};
+$('fTitle').oninput=e=>{const z=cur();if(z){z.title=e.target.value;render()}};
+$('fSub').oninput=e=>{const z=cur();if(z){z.sub=e.target.value;render()}};
+$('sw').onclick=e=>{const c=e.target.dataset.c,z=cur();if(c&&z){z.color=c;syncPanel();render()}};
+[['tTrai','trai'],['tPhai','phai'],['tDau','dau'],['tCuoi','cuoi']].forEach(([i,k])=>{$(i).value=T[k];$(i).oninput=e=>{T[k]=e.target.value;render()}});
+document.addEventListener('keydown',e=>{if(e.key==='Delete'&&!/INPUT|TEXTAREA/.test(document.activeElement.tagName))$('bDel').click()});
+$('bPng').onclick=()=>{
+  render(true);
+  const xml=new XMLSerializer().serializeToString(svg);
+  render();
+  const data='data:image/svg+xml;charset=utf-8,'+encodeURIComponent(xml.replace('<svg','<svg width="1200" height="2040"'));
+  const img=new Image();
+  img.onload=()=>{
+    const c=document.createElement('canvas');c.width=1200;c.height=2040;
+    const x=c.getContext('2d');x.fillStyle='#fff';x.fillRect(0,0,c.width,c.height);x.drawImage(img,0,0,c.width,c.height);
+    c.toBlob(b=>{pngBlob=b;$('mImg').src=URL.createObjectURL(b);$('modal').style.display='flex'},'image/png');
+  };
+  img.src=data;
+};
+let pngBlob=null;
+const msg=t=>{$('mMsg').textContent=t};
+$('mClose').onclick=()=>{$('modal').style.display='none'};
+$('mShare').onclick=async()=>{
+  try{
+    const f=new File([pngBlob],'so-do-xep-hang.png',{type:'image/png'});
+    if(navigator.canShare&&navigator.canShare({files:[f]})){await navigator.share({files:[f],title:'Sơ đồ xếp hàng'})}
+    else msg('Máy này không chia sẻ trực tiếp được. Hãy nhấn giữ vào ảnh rồi chọn Lưu ảnh, sau đó gửi từ thư viện ảnh.');
+  }catch(e){msg('Chưa chia sẻ được. Hãy nhấn giữ vào ảnh rồi chọn Lưu ảnh.')}
+};
+$('mCopy').onclick=async()=>{
+  try{await navigator.clipboard.write([new ClipboardItem({'image/png':pngBlob})]);msg('Đã sao chép ảnh. Bạn mở Zalo/Telegram và dán (Ctrl+V) là gửi được.')}
+  catch(e){msg('Không sao chép tự động được. Hãy bấm chuột phải (hoặc nhấn giữ) vào ảnh rồi chọn Sao chép ảnh.')}
+};
+$('mDown').onclick=()=>{
+  const a=document.createElement('a');a.href=$('mImg').src;a.download='so-do-xep-hang.png';a.click();
+  msg('Nếu không thấy file tải về, hãy nhấn giữ (hoặc chuột phải) vào ảnh rồi chọn Lưu ảnh.');
+};
+syncPanel();render();
+</script>
+</body>
+</html>
